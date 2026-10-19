@@ -14,7 +14,7 @@ mod css;
 mod cut;
 pub(crate) mod dimension;
 pub(crate) mod distortcmds;
-mod docinfo;
+pub(crate) mod docinfo;
 mod docmenu;
 pub(crate) mod docsetup;
 mod draw2;

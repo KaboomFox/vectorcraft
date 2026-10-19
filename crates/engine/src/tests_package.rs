@@ -215,19 +215,9 @@ fn the_document_info_report_has_every_category() {
     let mut s = poster(&dir);
     s.execute("file.place", &json!({"path": dir.file("art/red.png"), "link": false})).unwrap();
     let text = run(&mut s, "document.info", json!({"format": "text"}))["text"].as_str().unwrap().to_string();
-    for h in [
-        "DOCUMENT",
-        "OBJECTS",
-        "GRAPHIC STYLES",
-        "SPOT COLORS",
-        "PATTERN OBJECTS",
-        "GRADIENT SWATCHES",
-        "SYMBOLS",
-        "FONTS",
-        "FONT DETAILS",
-        "LINKED IMAGES",
-        "EMBEDDED IMAGES",
-    ] {
+    // Every category's heading, in capitals, whether or not it lists anything.
+    for (_, title) in crate::cmd::docinfo::CATEGORIES {
+        let h = title.to_uppercase();
         assert!(text.contains(&format!("\n{h}\n")), "{h}: {text}");
     }
     assert!(text.contains("Images: 3") && text.contains("Source Sans 3 Regular: built in; embedding allowed"), "{text}");
@@ -238,7 +228,7 @@ fn the_document_info_report_has_every_category() {
     assert_eq!((i["sections"].as_array().unwrap().len(), i["sections"][0]["id"].as_str()), (1, Some("linkedImages")));
     assert_eq!(i["sections"][0]["rows"].as_array().unwrap().len(), 2);
     let all = run(&mut s, "document.info", json!({}));
-    assert_eq!(all["sections"].as_array().unwrap().len(), 11);
+    assert_eq!(all["sections"].as_array().unwrap().len(), crate::cmd::docinfo::CATEGORIES.len());
     assert!(s.execute("document.info", &json!({"category": "brushes"})).is_err());
     assert!(s.execute("document.info", &json!({"format": "xml"})).is_err());
     // The bundled fonts allow embedding.

@@ -18,7 +18,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Document Info",
             ["Window", "Document Info"],
             None,
-            "{selectionOnly?, category?: document|objects|graphicStyles|spotColors|patterns|gradients|symbols|fonts|fontDetails|linkedImages|embeddedImages (only that one in sections and the text), format?: \"text\" (→ {text}: the report Document Info › Save… and Package write)} → {document, objects: {paths, compoundPaths, groups, …}, pathLength: pt (the paths' total length, compound paths' included, guides left out), fonts, images, swatches, graphicStyleNames (with selectionOnly: the styles the selected objects are linked to), …, sections: [{id, title, rows: [[label, value]]}] (the panel's categories; fontDetails: each font's file and whether its licence lets it be embedded)}",
+            "{selectionOnly?, category?: document|objects|graphicStyles|spotColors|patterns|gradients|symbols|fonts|fontDetails|linkedImages|embeddedImages|pluginData (only that one in sections and the text), format?: \"text\" (→ {text}: the report Document Info › Save… and Package write)} → {document, objects: {paths, compoundPaths, groups, …}, pathLength: pt (the paths' total length, compound paths' included, guides left out), fonts, images, swatches, graphicStyleNames (with selectionOnly: the styles the selected objects are linked to), …, sections: [{id, title, rows: [[label, value]]}] (the panel's categories; fontDetails: each font's file and whether its licence lets it be embedded; pluginData: what each plug-in keeps with the document, and its size)}",
             has_doc,
             info
         ),
@@ -35,7 +35,7 @@ pub fn specs() -> Vec<CommandSpec> {
 }
 
 /// Document Info's categories: (id, title), in the order the panel and the report show them.
-pub const CATEGORIES: [(&str, &str); 11] = [
+pub const CATEGORIES: [(&str, &str); 12] = [
     ("document", "Document"),
     ("objects", "Objects"),
     ("graphicStyles", "Graphic Styles"),
@@ -47,6 +47,7 @@ pub const CATEGORIES: [(&str, &str); 11] = [
     ("fontDetails", "Font Details"),
     ("linkedImages", "Linked Images"),
     ("embeddedImages", "Embedded Images"),
+    ("pluginData", "Plug-in Data"),
 ];
 
 /// The object counts of `document.info` and their labels.
@@ -174,6 +175,17 @@ fn sections(d: &Document, info: &Value, fonts: &BTreeSet<super::fonts::UsedFont>
                 "linkedImages" => {
                     images.iter().filter_map(|(name, w, h, link)| Some((name.clone(), format!("{w} × {h} px — {}", link.as_ref()?)))).collect()
                 }
+                // What each plug-in keeps with the document: by its name when it is installed, its
+                // size first and its id last, as linked images give their size before their path.
+                "pluginData" => d
+                    .plugin_data
+                    .iter()
+                    .map(|(id, data)| {
+                        let size = serde_json::to_vec(data).map_or(0, |b| b.len());
+                        let name = vectorcraft_plugins::registry::get(id).map(|p| p.manifest().name.clone());
+                        (name.unwrap_or_else(|| id.clone()), format!("{size} bytes — {id}"))
+                    })
+                    .collect(),
                 _ => images.iter().filter(|i| i.3.is_none()).map(|(name, w, h, _)| (name.clone(), format!("{w} × {h} px"))).collect(),
             };
             Section { id, title, rows }
