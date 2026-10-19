@@ -200,15 +200,42 @@ fn node_bezpath(n: &Node) -> Option<BezPath> {
 }
 
 fn apply(effects: &[Effect], bp: &BezPath, ctx: &GeomContext) -> BezPath {
+    apply_showing(effects, bp, ctx, None)
+}
+
+/// [`apply`], gathering what its live-effect plug-ins show besides geometry into `overlays`.
+fn apply_showing(effects: &[Effect], bp: &BezPath, ctx: &GeomContext, overlays: Option<&mut Vec<Arc<effects::Overlay>>>) -> BezPath {
     if !effects::has_geometry(effects) || bp.elements().is_empty() {
         return bp.clone();
     }
-    effects::apply_geometry_bez(effects, bp, bp.bounding_box(), ctx)
+    match overlays {
+        Some(out) => effects::apply_geometry_bez_showing(effects, bp, bp.bounding_box(), ctx, out),
+        None => effects::apply_geometry_bez(effects, bp, bp.bounding_box(), ctx),
+    }
 }
 
 /// The object-level effected geometry of `n` (base path `bp`).
 pub(crate) fn effected_path(n: &Node, bp: &BezPath) -> BezPath {
     apply(&n.appearance.effects, bp, &GeomContext::of(n))
+}
+
+/// What the live-effect plug-ins on path or compound path `n` show besides its geometry: the
+/// lines the canvas draws above the artwork, in the order the plug-ins run (its own effects, then
+/// those of each fill and stroke drawn). They come from the same runs as drawing `n`, so from the
+/// plug-ins' cache once it has been drawn. Other objects show none.
+pub fn plugin_overlays(n: &Node) -> Vec<Arc<effects::Overlay>> {
+    let mut out = Vec::new();
+    // Guides are drawn as guides, without their effects.
+    if !effects::has_plugin_effect(n) || matches!(n.kind, NodeKind::Path { guide: true, .. }) {
+        return out;
+    }
+    let Some(bp) = node_bezpath(n) else { return out };
+    let ctx = GeomContext::of(n);
+    let g = apply_showing(&n.appearance.effects, &bp, &ctx, Some(&mut out));
+    for item in n.appearance.items.iter().filter(|i| i.visible() && !i.paint().is_none()) {
+        apply_showing(item_effects(item), &g, &ctx.item(item), Some(&mut out));
+    }
+    out
 }
 
 fn item_effects(item: &AppearanceItem) -> &[Effect] {

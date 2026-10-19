@@ -292,6 +292,33 @@ out from the object alone.
 For a **live effect**, the geometry of every returned object's `path` (their subpaths, in order) replaces the
 object's; the rest is ignored (the object keeps its own appearance). An empty list removes the geometry.
 
+A live effect may also show an **overlay**: lines on the canvas beside its geometry, or instead of it, such as a
+preview of how a machine will work the object (a pen's path, a cutter's passes) or construction lines. They are for
+the eyes only: the canvas draws them above the artwork (not in Outline view, which draws no effects), and nothing
+exports, prints, measures or hit-tests them. The document doesn't hold them either: they are cached with the effect's
+result, so the plug-in runs no more often for them (`vectorcraft_plugins::overlay`). The canvas shows the overlays of
+effects on paths and compound paths, in visible layers and groups; effects on type, groups and symbols draw theirs
+nowhere yet.
+
+```json
+{"objects": [...], "overlay": {"format": "f32-polylines", "data": "<base64>"}}
+```
+
+Without `objects`, the geometry stays as it was. The data is little-endian binary, 4 bytes a coordinate:
+
+| Field | Type | Meaning |
+|---|---|---|
+| count | `u32` | lines, at most 100,000 |
+| each line: colour | 4 × `u8` | red, green, blue, alpha, not premultiplied |
+| width | `f32` | in points, 0–1,000; 0 is one pixel wide at any zoom |
+| n | `u32` | points, at least 2 |
+| points | n × 2 × `f32` | x, y in the geometry's coordinates, finite and within ±4,000,000 pt |
+
+An overlay holds at most 1,000,000 points, and nothing may follow its last line. An overlay that breaks a rule fails
+the run as a bad `objects` would: the geometry is drawn unchanged and `plugin.info` says why (`lastError`). Hosts from
+before overlays ignore the key, and the canvas draws at most 100,000 points of them at a time, as it does for
+selection outlines.
+
 An **exporter** returns `{"dataBase64": "…", "warnings"?: ["…"]}`: the file, in base64, which the host writes as it
 is, and what the export left out or changed, for the user (at most 100 warnings of at most 500 characters each, shown
 with the export's own). A decline (`{"error": …}`), a missing `dataBase64` or data that isn't base64 writes nothing.

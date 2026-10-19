@@ -5,6 +5,9 @@
 //! sees them ([`Paints`]): an effect can draw as wide as the stroke it sits on, or tell its fills
 //! apart, without asking for them again as parameters.
 //!
+//! Besides geometry, or instead of it, a live effect may return an [`Overlay`]: lines the canvas
+//! shows above the artwork and nothing else draws ([`overlay`]).
+//!
 //! Drawing evaluates effects often (every frame, hit tests, bounds), so results are cached by
 //! plug-in installation, parameters, input geometry and paints: the plug-in runs again only when
 //! one of them changes. Failures are cached too (the geometry is then drawn unchanged) and
@@ -12,13 +15,14 @@
 
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use serde_json::{Value, json};
 use vectorcraft_doc::{Appearance, AppearanceItem};
 use vectorcraft_geom::{FillRule, PathData, Rect};
 
-use crate::objects::{decode, output_geometry, paint_lists};
+use crate::objects::{declined, decode_objects, output_geometry, paint_lists};
+pub use crate::overlay::Overlay;
 use crate::{Error, Kind, Limits, Result, registry};
 
 /// The effect id prefix of live-effect plug-ins: `plugin.<plug-in id>`.
@@ -107,7 +111,14 @@ impl Key {
     }
 }
 
-type Cache = HashMap<u64, (Key, Option<PathData>)>;
+/// What one run of a live effect made: its geometry, and the overlay it showed with it.
+#[derive(Clone)]
+struct Ran {
+    path: PathData,
+    overlay: Option<Arc<Overlay>>,
+}
+
+type Cache = HashMap<u64, (Key, Option<Ran>)>;
 
 static CACHE: Mutex<Option<Cache>> = Mutex::new(None);
 static ERRORS: Mutex<Option<HashMap<String, String>>> = Mutex::new(None);
@@ -117,7 +128,7 @@ pub fn last_error(id: &str) -> Option<String> {
     ERRORS.lock().unwrap_or_else(|e| e.into_inner()).as_ref()?.get(id).cloned()
 }
 
-fn note(id: &str, r: &Result<PathData>) {
+fn note(id: &str, r: &Result<Ran>) {
     let mut errors = ERRORS.lock().unwrap_or_else(|e| e.into_inner());
     let errors = errors.get_or_insert_with(HashMap::new);
     match r {
@@ -130,6 +141,17 @@ fn note(id: &str, r: &Result<PathData>) {
 /// with `paints`: the new geometry, or `None` when the plug-in isn't installed, isn't an effect, or
 /// fails (the caller then keeps the geometry).
 pub fn apply(id: &str, params: &Value, path: &PathData, bounds: Rect, rule: FillRule, paints: Paints) -> Option<PathData> {
+    ran(id, params, path, bounds, rule, paints).map(|r| r.path)
+}
+
+/// What the same run as [`apply`]'s showed besides its geometry, if anything: from the cache when
+/// the effect was drawn (it runs now otherwise).
+pub fn overlay(id: &str, params: &Value, path: &PathData, bounds: Rect, rule: FillRule, paints: Paints) -> Option<Arc<Overlay>> {
+    ran(id, params, path, bounds, rule, paints)?.overlay
+}
+
+/// The run of [`apply`] and [`overlay`], from the cache when it can.
+fn ran(id: &str, params: &Value, path: &PathData, bounds: Rect, rule: FillRule, paints: Paints) -> Option<Ran> {
     let plugin = registry::get(id).filter(|p| p.manifest().kind == Kind::Effect)?;
     let resolved = Value::Object(plugin.manifest().resolve_params(params).ok()?);
     let given = paints.given();
@@ -165,7 +187,7 @@ pub fn apply(id: &str, params: &Value, path: &PathData, bounds: Rect, rule: Fill
 }
 
 /// One run of `plugin` on `path`, with the object's paints as `given`.
-fn run(plugin: &crate::Plugin, mut params: Value, path: &PathData, bounds: Rect, rule: FillRule, given: Given) -> Result<PathData> {
+fn run(plugin: &crate::Plugin, mut params: Value, path: &PathData, bounds: Rect, rule: FillRule, given: Given) -> Result<Ran> {
     let b = json!([bounds.x0, bounds.y0, bounds.x1, bounds.y1]);
     params["_context"] = json!({"mode": "effect", "bounds": b, "item": given.item});
     let rule = match rule {
@@ -176,7 +198,22 @@ fn run(plugin: &crate::Plugin, mut params: Value, path: &PathData, bounds: Rect,
     let (input, params) = (serde_json::to_vec(&input), serde_json::to_vec(&params));
     let (Ok(input), Ok(params)) = (input, params) else { return Err(Error::Params("can't encode the input".into())) };
     let limits = Limits { wall_time_ms: WALL_TIME_MS, ..plugin.limits().clone() };
-    Ok(output_geometry(decode(&plugin.run_limited(&input, &params, &limits)?)?))
+    read(&plugin.run_limited(&input, &params, &limits)?, path)
+}
+
+/// A live effect's output: `{"objects": [...], "overlay"?: …}`, or an overlay alone, which leaves
+/// the geometry (`input`) as it is.
+fn read(bytes: &[u8], input: &PathData) -> Result<Ran> {
+    let v: Value = serde_json::from_slice(bytes).map_err(|e| Error::Output(format!("not JSON: {e}")))?;
+    if let Some(e) = declined(&v) {
+        return Err(e);
+    }
+    let overlay = Overlay::from_output(&v)?.map(Arc::new);
+    let path = match (v.get("objects").filter(|o| !o.is_null()), &overlay) {
+        (None, Some(_)) => input.clone(),
+        _ => output_geometry(decode_objects(&v)?),
+    };
+    Ok(Ran { path, overlay })
 }
 
 #[cfg(test)]

@@ -115,6 +115,8 @@ mod tests_place;
 #[cfg(test)]
 mod tests_plugins;
 #[cfg(test)]
+mod tests_plugin_overlays;
+#[cfg(test)]
 mod tests_plugin_runs;
 #[cfg(test)]
 mod tests_printps;
@@ -321,6 +323,8 @@ pub struct CanvasCache {
     pub worker_started: bool,
     /// The slices as laid out for (document uid, revision): the canvas draws them every frame.
     pub slices: Option<SliceCache>,
+    /// What the document's live-effect plug-ins show besides geometry ([`canvas`]).
+    pub plugin_overlays: Option<PluginOverlayCache>,
     /// The print tiling's pages for (document uid, revision) (View → Show Print Tiling).
     pub print_tiling: Option<PrintTilingCache>,
     /// The marks Type → Show Hidden Characters drew on each text object in the last frame. A frame
@@ -338,6 +342,10 @@ pub struct CanvasCache {
 
 /// [`CanvasCache::slices`]: the layout of the slices of (document uid, revision).
 pub type SliceCache = ((u64, u64), std::sync::Arc<Vec<vectorcraft_doc::SliceArea>>);
+
+/// What live-effect plug-ins show besides their geometry, for (document uid, revision, plug-in
+/// registry revision): the canvas draws it every frame.
+pub type PluginOverlayCache = ((u64, u64, u64), std::sync::Arc<Vec<std::sync::Arc<vectorcraft_render::effects::Overlay>>>);
 
 /// [`CanvasCache::print_tiling`]: the print tiling of (document uid, revision).
 pub type PrintTilingCache = ((u64, u64), std::sync::Arc<Vec<vectorcraft_pdf::TilingPage>>);
@@ -539,6 +547,7 @@ impl VectorcraftApp {
                 worker: None,
                 worker_started: false,
                 slices: None,
+                plugin_overlays: None,
                 print_tiling: None,
                 hidden_chars: Default::default(),
                 selection_box: None,

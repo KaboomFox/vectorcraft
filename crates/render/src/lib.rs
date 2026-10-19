@@ -35,6 +35,7 @@ use ink::Ink;
 use lru::FrameCache;
 
 pub use brush_fx::instance_art;
+pub use fx::plugin_overlays;
 pub use effects::stroke::width_outline;
 pub use images::{IMAGE_CACHE_MAX, image_cache_bytes, set_image_cache_budget};
 pub use live::expand_live;
@@ -2518,6 +2519,8 @@ mod tests_layeropts;
 mod tests_memory;
 #[cfg(test)]
 mod tests_objectfx;
+#[cfg(test)]
+mod tests_overlays;
 #[cfg(test)]
 mod tests_placed_document;
 #[cfg(test)]

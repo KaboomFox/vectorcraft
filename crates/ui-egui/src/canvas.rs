@@ -469,6 +469,11 @@ pub fn show(app: &mut VectorcraftApp, ui: &mut Ui) {
             }
         }
     }
+    // What live-effect plug-ins show besides their geometry, over the art. Outline view draws no
+    // effects, so none of this either.
+    if !app.ui.view.outline {
+        plugin_effect_overlay(app, &painter, &xf);
+    }
     if let Some(look) = grid_look.filter(|_| !grids_in_back) {
         grid(&painter, &xf, doc.grid.spacing, doc.grid.subdivisions, look);
     }
@@ -2241,6 +2246,46 @@ fn thread_overlay(app: &VectorcraftApp, p: &egui::Painter, xf: &Xf) {
                 p.line_segment([port - egui::vec2(2.0, 0.0), port + egui::vec2(2.0, 0.0)], Stroke::new(1.0, color));
             }
         }
+    }
+}
+
+/// What live-effect plug-ins show besides their geometry ([`vectorcraft_render::plugin_overlays`]):
+/// lines drawn here only, over the art, and never exported, printed or hit-tested. Objects in hidden
+/// layers and groups show none. At most [`OVERLAY_MAX_ANCHORS`] points are drawn, in stacking order,
+/// as for selection outlines. Worked out again only when the document or the installed plug-ins
+/// change (the plug-ins' results come from their cache).
+fn plugin_effect_overlay(app: &mut VectorcraftApp, p: &egui::Painter, xf: &Xf) {
+    let Some(st) = app.session.active() else { return };
+    let key = (st.uid, st.revision, vectorcraft_render::effects::plugin_revision());
+    let overlays = match &app.canvas.plugin_overlays {
+        Some((k, o)) if *k == key => o.clone(),
+        _ => {
+            fn shown(n: &Node, out: &mut Vec<std::sync::Arc<vectorcraft_render::effects::Overlay>>) {
+                if n.visible {
+                    out.extend(vectorcraft_render::plugin_overlays(n));
+                    for c in n.children().into_iter().flatten() {
+                        shown(c, out);
+                    }
+                }
+            }
+            let mut all = Vec::new();
+            for layer in &st.doc.layers {
+                shown(layer, &mut all);
+            }
+            let all = std::sync::Arc::new(all);
+            app.canvas.plugin_overlays = Some((key, all.clone()));
+            all
+        }
+    };
+    let mut left = OVERLAY_MAX_ANCHORS;
+    for line in overlays.iter().flat_map(|o| &o.lines) {
+        let Some(rest) = left.checked_sub(line.points.len()) else { break };
+        left = rest;
+        let [r, g, b, a] = line.color;
+        // Points scale with the zoom, as strokes do; 0 is one pixel at any zoom.
+        let width = if line.width > 0.0 { (f64::from(line.width) * xf.zoom).max(1.0) as f32 } else { 1.0 };
+        let points = line.points.iter().map(|q| xf.to_screen(Point::new(f64::from(q[0]), f64::from(q[1])))).collect();
+        p.add(Shape::line(points, Stroke::new(width, Color32::from_rgba_unmultiplied(r, g, b, a))));
     }
 }
 

@@ -55,6 +55,8 @@ mod tests;
 #[cfg(test)]
 mod tests_scale;
 
+use std::sync::Arc;
+
 use serde_json::{Map, Value, json};
 use vectorcraft_doc::{Appearance, AppearanceItem, Effect, Node, NodeKind, StrokeLayer};
 use vectorcraft_geom::{BezPath, FillRule, PathData, Rect};
@@ -929,6 +931,10 @@ pub fn plugin_revision() -> u64 {
     vectorcraft_plugins::registry::revision()
 }
 
+/// What a live-effect plug-in shows besides its geometry: lines the canvas draws above the artwork
+/// and nothing else does ([`apply_geometry_bez_showing`]).
+pub use vectorcraft_plugins::overlay::Overlay;
+
 /// Context the geometry effects may need from the object's appearance.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct GeomContext<'a> {
@@ -969,6 +975,11 @@ impl<'a> GeomContext<'a> {
             AppearanceItem::Fill(_) => Self { item: at, ..self },
         }
     }
+
+    /// What a live-effect plug-in is given of the object's paints.
+    fn paints(&self) -> vectorcraft_plugins::effect::Paints<'a> {
+        vectorcraft_plugins::effect::Paints { appearance: self.appearance, item: self.item }
+    }
 }
 
 /// Evaluate the visible geometry effects of `effects` on `path`, in order. `bounds` is the
@@ -980,6 +991,24 @@ pub fn apply_geometry(effects: &[Effect], path: &PathData, bounds: Rect) -> Path
 
 /// [`apply_geometry`] with an explicit [`GeomContext`].
 pub fn apply_geometry_with(effects: &[Effect], path: &PathData, bounds: Rect, ctx: &GeomContext) -> PathData {
+    chain(effects, path, bounds, ctx, None)
+}
+
+/// Convenience wrapper on kurbo paths.
+pub fn apply_geometry_bez(effects: &[Effect], path: &BezPath, bounds: Rect, ctx: &GeomContext) -> BezPath {
+    apply_geometry_with(effects, &PathData::from_bezpath(path), bounds, ctx).to_bezpath()
+}
+
+/// [`apply_geometry_bez`], also gathering what its live-effect plug-ins show besides geometry
+/// into `overlays`, in the order they run. The runs are those of drawing the same geometry, so
+/// once it has been drawn they come from the plug-ins' cache.
+pub fn apply_geometry_bez_showing(effects: &[Effect], path: &BezPath, bounds: Rect, ctx: &GeomContext, overlays: &mut Vec<Arc<Overlay>>) -> BezPath {
+    chain(effects, &PathData::from_bezpath(path), bounds, ctx, Some(overlays)).to_bezpath()
+}
+
+/// The visible geometry effects of `effects` run on `path` in order (see [`apply_geometry`]),
+/// the overlays of its plug-ins gathered into `overlays` when given.
+fn chain(effects: &[Effect], path: &PathData, bounds: Rect, ctx: &GeomContext, mut overlays: Option<&mut Vec<Arc<Overlay>>>) -> PathData {
     let mut cur = path.clone();
     let mut b = bounds;
     let mut first = true;
@@ -992,21 +1021,18 @@ pub fn apply_geometry_with(effects: &[Effect], path: &PathData, bounds: Rect, ct
             break;
         }
         let p = merged_params(&e.id, &e.params);
+        if let (Some(out), Some(plugin)) = (overlays.as_deref_mut(), vectorcraft_plugins::effect::plugin_id(&e.id)) {
+            out.extend(vectorcraft_plugins::effect::overlay(plugin, &p, &cur, b, ctx.rule, ctx.paints()));
+        }
         cur = apply_one(&e.id, &p, &cur, b, ctx);
     }
     cur
 }
 
-/// Convenience wrapper on kurbo paths.
-pub fn apply_geometry_bez(effects: &[Effect], path: &BezPath, bounds: Rect, ctx: &GeomContext) -> BezPath {
-    apply_geometry_with(effects, &PathData::from_bezpath(path), bounds, ctx).to_bezpath()
-}
-
 pub(crate) fn apply_one(id: &str, p: &Value, path: &PathData, b: Rect, ctx: &GeomContext) -> PathData {
     use util::*;
     if let Some(plugin) = vectorcraft_plugins::effect::plugin_id(id) {
-        let paints = vectorcraft_plugins::effect::Paints { appearance: ctx.appearance, item: ctx.item };
-        return vectorcraft_plugins::effect::apply(plugin, p, path, b, ctx.rule, paints).unwrap_or_else(|| path.clone());
+        return vectorcraft_plugins::effect::apply(plugin, p, path, b, ctx.rule, ctx.paints()).unwrap_or_else(|| path.clone());
     }
     match id {
         "distort.freeDistort" => distort::free_distort(path, b, p),
