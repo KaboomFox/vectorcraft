@@ -11,6 +11,8 @@ use vectorcraft_text::embed::Embedding;
 
 use super::*;
 
+/// This module's commands: `document.info` (Window › Document Info, and the report it saves) and
+/// `object.makePixelPerfect`.
 pub fn specs() -> Vec<CommandSpec> {
     vec![
         cmd!(
@@ -18,7 +20,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Document Info",
             ["Window", "Document Info"],
             None,
-            "{selectionOnly?, category?: document|objects|graphicStyles|brushes|spotColors|patterns|gradients|symbols|fonts|fontDetails|linkedImages|embeddedImages|repeats (only that one in sections and the text), format?: \"text\" (→ {text}: the report Document Info › Save… and Package write)} → {document, objects: {paths, compoundPaths, groups, …}, pathLength: pt (the paths' total length, compound paths' included, guides left out), fonts, images, swatches, graphicStyleNames (with selectionOnly: the styles the selected objects are linked to), brushNames (the Brushes panel's brushes; with selectionOnly: the brushes the selected objects' strokes use), repeatObjects: [{id, name, type: radial|grid|mirror, instances, rows?, cols?}] (the Repeat objects, those in groups and other repeats included; with selectionOnly: those in the selection), …, sections: [{id, title, rows: [[label, value]]}] (the panel's categories; fontDetails: each font's file and whether its license lets it be embedded)}",
+            "{selectionOnly?, category?: document|objects|graphicStyles|brushes|spotColors|patterns|gradients|symbols|fonts|fontDetails|linkedImages|embeddedImages|repeats|pluginData (only that one in sections and the text), format?: \"text\" (→ {text}: the report Document Info › Save… and Package write)} → {document, objects: {paths, compoundPaths, groups, …}, pathLength: pt (the paths' total length, compound paths' included, guides left out), fonts, images, swatches, graphicStyleNames (with selectionOnly: the styles the selected objects are linked to), brushNames (the Brushes panel's brushes; with selectionOnly: the brushes the selected objects' strokes use), repeatObjects: [{id, name, type: radial|grid|mirror, instances, rows?, cols?}] (the Repeat objects, those in groups and other repeats included; with selectionOnly: those in the selection), …, sections: [{id, title, rows: [[label, value]]}] (the panel's categories; fontDetails: each font's file and whether its license lets it be embedded; pluginData: what each plug-in keeps with the document, and its size)}",
             has_doc,
             info
         ),
@@ -35,7 +37,7 @@ pub fn specs() -> Vec<CommandSpec> {
 }
 
 /// Document Info's categories: (id, title), in the order the panel and the report show them.
-pub const CATEGORIES: [(&str, &str); 13] = [
+pub const CATEGORIES: [(&str, &str); 14] = [
     ("document", "Document"),
     ("objects", "Objects"),
     ("graphicStyles", "Graphic Styles"),
@@ -49,6 +51,7 @@ pub const CATEGORIES: [(&str, &str); 13] = [
     ("linkedImages", "Linked Images"),
     ("embeddedImages", "Embedded Images"),
     ("repeats", "Repeat Objects"),
+    ("pluginData", "Plug-in Data"),
 ];
 
 /// The object counts of `document.info` and their labels.
@@ -216,6 +219,17 @@ fn sections(
                     images.iter().filter_map(|(name, w, h, link)| Some((name.clone(), format!("{w} × {h} px — {}", link.as_ref()?)))).collect()
                 }
                 "repeats" => repeats.to_vec(),
+                // What each plug-in keeps with the document: by its name when it is installed, its
+                // size first and its id last, as linked images give their size before their path.
+                "pluginData" => d
+                    .plugin_data
+                    .iter()
+                    .map(|(id, data)| {
+                        let size = serde_json::to_vec(data).map_or(0, |b| b.len());
+                        let name = vectorcraft_plugins::registry::get(id).map(|p| p.manifest().name.clone());
+                        (name.unwrap_or_else(|| id.clone()), format!("{size} bytes — {id}"))
+                    })
+                    .collect(),
                 _ => images.iter().filter(|i| i.3.is_none()).map(|(name, w, h, _)| (name.clone(), format!("{w} × {h} px"))).collect(),
             };
             Section { id, title, rows }

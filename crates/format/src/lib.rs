@@ -10,8 +10,9 @@
 //!   "document": { …vectorcraft_doc::Document… },
 //!   "images": { "<key>": { "mime": "image/png", "data": "<base64>" } } }
 //! ```
-//! It is lossless for everything in the document model; foreign data lives in `document.unknown`
-//! and document keys a newer version added are kept (`Document::extra`). Only the images the
+//! It is lossless for everything in the document model; foreign data lives in `document.unknown`,
+//! what plug-ins keep with the document in `document.plugin_data` (by plug-in id), and document
+//! keys a newer version added are kept (`Document::extra`). Only the images the
 //! document uses are written. `preview` (optional) is a PNG of the first artboard, at most
 //! [`PREVIEW_MAX`] pixels on its longer side, for file browsers. `profiles` (optional, Embed ICC
 //! Profiles) holds the ICC files of colour profiles the document is tagged with, for machines that

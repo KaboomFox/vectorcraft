@@ -822,6 +822,11 @@ pub struct Document {
     /// Foreign data preserved on round-trip.
     #[serde(default, skip_serializing_if = "skip::is_empty_map")]
     pub unknown: Shared<serde_json::Map<String, serde_json::Value>>,
+    /// Plug-ins' own data kept with the document, by plug-in id: settings a plug-in keeps for the
+    /// whole document rather than per object. A filter plug-in writes its own entry and reads it
+    /// back, and an exporter reads it (`vectorcraft-plugins`, which caps each entry).
+    #[serde(default, skip_serializing_if = "skip::is_empty_map")]
+    pub plugin_data: Shared<serde_json::Map<String, serde_json::Value>>,
     /// Transparency panel → Page Isolated Blending: the page is an isolated transparency group,
     /// so top-level blend modes don't blend with what lies under the page.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
@@ -1016,6 +1021,7 @@ impl Document {
             mask_edit: None,
             next_id: 1,
             unknown: Default::default(),
+            plugin_data: Default::default(),
             page_isolate: false,
             page_knockout: false,
             spot_use_lab: true,

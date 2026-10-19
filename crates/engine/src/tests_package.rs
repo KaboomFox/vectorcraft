@@ -209,27 +209,17 @@ fn a_substituted_style_names_the_style_shown() {
     assert!(report.contains("Source Sans 3 Black Wide: substituted: shown in Source Sans 3 "), "{report}");
 }
 
+/// The text report has a heading for every Document Info category, whether or not it lists
+/// anything, and `document.info` a section for each; one category asked for gives that one alone.
 #[test]
 fn the_document_info_report_has_every_category() {
     let dir = Folder::new("docinfo-report");
     let mut s = poster(&dir);
     s.execute("file.place", &json!({"path": dir.file("art/red.png"), "link": false})).unwrap();
     let text = run(&mut s, "document.info", json!({"format": "text"}))["text"].as_str().unwrap().to_string();
-    for h in [
-        "DOCUMENT",
-        "OBJECTS",
-        "GRAPHIC STYLES",
-        "BRUSHES",
-        "SPOT COLORS",
-        "PATTERN OBJECTS",
-        "GRADIENT SWATCHES",
-        "SYMBOLS",
-        "FONTS",
-        "FONT DETAILS",
-        "LINKED IMAGES",
-        "EMBEDDED IMAGES",
-        "REPEAT OBJECTS",
-    ] {
+    // Every category's heading, in capitals, whether or not it lists anything.
+    for (_, title) in crate::cmd::docinfo::CATEGORIES {
+        let h = title.to_uppercase();
         assert!(text.contains(&format!("\n{h}\n")), "{h}: {text}");
     }
     assert!(text.contains("Images: 3") && text.contains("Source Sans 3 Regular: built in; embedding allowed"), "{text}");
@@ -240,7 +230,7 @@ fn the_document_info_report_has_every_category() {
     assert_eq!((i["sections"].as_array().unwrap().len(), i["sections"][0]["id"].as_str()), (1, Some("linkedImages")));
     assert_eq!(i["sections"][0]["rows"].as_array().unwrap().len(), 2);
     let all = run(&mut s, "document.info", json!({}));
-    assert_eq!(all["sections"].as_array().unwrap().len(), 13);
+    assert_eq!(all["sections"].as_array().unwrap().len(), crate::cmd::docinfo::CATEGORIES.len());
     let i = run(&mut s, "document.info", json!({"category": "brushes"}));
     assert_eq!((i["sections"].as_array().unwrap().len(), i["sections"][0]["id"].as_str()), (1, Some("brushes")));
     let i = run(&mut s, "document.info", json!({"category": "repeats"}));

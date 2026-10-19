@@ -330,6 +330,59 @@ fn rough_frame_test_filter() {
     std::fs::write(std::path::Path::new(&dir).join("rough-frame-test-filter.wasm"), wat::parse_str(src).unwrap()).unwrap();
 }
 
+/// A filter keeps data with the document: it writes it with `documentData` in the same undo step as
+/// its objects (`null` removes it), reads what it last wrote in `_context.documentData`, and the
+/// data is saved with the document. More than the limit is refused.
+#[test]
+fn filters_keep_their_data_with_the_document() {
+    let mut s = session();
+    let id = rect(&mut s, 10.0, "#ff0000");
+    let pid = "test.engine.data";
+    let returning = |out: Value| tpl::returning(&tpl::manifest(pid, "filter", "{}"), &out.to_string());
+    let keep = |data: Value| json!({"objects": [{"id": id.0}], "documentData": data});
+    let data = |s: &Session| s.doc().unwrap().doc.plugin_data.get(pid).cloned();
+    let filter = |s: &mut Session| s.execute("plugin.run", &json!({"id": pid, "ids": [id.0]}));
+    install_wat(&mut s, &returning(keep(json!({"pen": 2}))));
+    filter(&mut s).unwrap();
+    assert_eq!(data(&s), Some(json!({"pen": 2})));
+    run(&mut s, "edit.undo", json!({}));
+    assert_eq!(data(&s), None, "one undo step with the objects");
+    run(&mut s, "edit.redo", json!({}));
+    // Read back: this one names the object only when it is given the data.
+    let named = json!({"objects": [{"id": id.0, "name": "Pen 2"}]}).to_string();
+    install_wat(&mut s, &tpl::when_given(&tpl::manifest(pid, "filter", "{}"), tpl::Given::Params, r#""documentData":{"pen":2}"#, &named));
+    filter(&mut s).unwrap();
+    assert_eq!(node(&s, id).name.as_deref(), Some("Pen 2"));
+    // Saved with the document, and listed by Document Info.
+    let saved = vectorcraft_format::load(&vectorcraft_format::save(&s.doc().unwrap().doc, false)).unwrap();
+    assert_eq!(saved.plugin_data.get(pid), Some(&json!({"pen": 2})));
+    let info = run(&mut s, "document.info", json!({"category": "pluginData"}));
+    assert_eq!(info["sections"][0]["rows"], json!([["Test test.engine.data", "9 bytes — test.engine.data"]]));
+    // Too much is refused, and the document stays as it was; null removes the data.
+    let before = s.doc().unwrap().doc.clone();
+    let big = "x".repeat(vectorcraft_plugins::objects::MAX_DOCUMENT_DATA);
+    install_wat(&mut s, &returning(keep(json!(big))));
+    let e = filter(&mut s).unwrap_err().to_string();
+    assert!(e.contains("documentData"), "{e}");
+    assert_eq!(s.doc().unwrap().doc, before);
+    install_wat(&mut s, &returning(keep(Value::Null)));
+    filter(&mut s).unwrap();
+    assert_eq!(data(&s), None);
+}
+
+/// `CRAFT_PLUGIN_DATA_WASM=<folder>` saves a test filter to try in the app
+/// (`plotter-setup-test-filter.wasm`): run with nothing selected, it changes no objects and keeps
+/// a plotter's pens with the document.
+#[test]
+fn plotter_setup_test_filter() {
+    let Some(dir) = std::env::var_os("CRAFT_PLUGIN_DATA_WASM") else { return };
+    let out = json!({"objects": [], "documentData": {"pens": [{"slot": 1, "color": "#1b1b1b", "width": 0.3}, {"slot": 2, "color": "#c0392b", "width": 0.5}]}});
+    let manifest = r#"{"id":"org.example.plottersetup","name":"Plotter Setup (test plug-in)","version":"1","kind":"filter",
+        "description":"Keeps the plotter's pens with the document.","params":{}}"#;
+    let src = tpl::returning(manifest, &out.to_string());
+    std::fs::write(std::path::Path::new(&dir).join("plotter-setup-test-filter.wasm"), wat::parse_str(src).unwrap()).unwrap();
+}
+
 #[test]
 fn plugin_management_commands() {
     let mut s = session();
