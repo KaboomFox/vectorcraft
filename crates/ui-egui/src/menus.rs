@@ -892,7 +892,19 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
         "ui.installPlugin",
         "Install Plug-in…",
         "",
-        "{path?: a .wasm file} install a WebAssembly plug-in (plugin.install); without a path pick one (the web opens the browser's file picker; File › Open of a .wasm installs it too)",
+        "{path?: a .wasm file | dataBase64?: the module (+ name?: shown as its source), allowHeavy?: bool (the user agreed to its heavy budget)} install a WebAssembly plug-in (plugin.install); without a path pick one (the web opens the browser's file picker; File › Open of a .wasm installs it too). A filter that asks for a heavy budget asks the user first: OK installs it → plugin.install's result | {pending: \"confirm\"} while it asks",
+    ),
+    (
+        "plugin.cancelRuns",
+        "Cancel Plug-in Run",
+        "",
+        "{} stop every heavy filter running in the background (its progress window's Cancel): it stops at the next slice of its budget and changes nothing → {cancelled: n}",
+    ),
+    (
+        "plugin.hideRuns",
+        "Continue in Background",
+        "",
+        "{} close the progress window of the heavy filters running in the background; they go on, shown in the status bar → {hidden: n}",
     ),
     (
         "ui.checkScript",
@@ -1694,7 +1706,9 @@ pub fn run_ui_command(app: &mut VectorcraftApp, id: &str, p: &Value) -> Option<R
         }
         "ui.printPresetDialog" => crate::dialogs::print::open_preset(app, p),
         "plugin.dialog" => crate::dialogs::plugin::open(app, p),
-        "ui.installPlugin" => io::install_plugin(app, s("path")),
+        "ui.installPlugin" => io::install_plugin(app, p),
+        "plugin.cancelRuns" => Ok(crate::plugin_runs::cancel_all(app)),
+        "plugin.hideRuns" => Ok(crate::plugin_runs::hide_all(app)),
         "ui.checkScript" => crate::dialogs::script_check::command(app, p),
         "ui.perspectiveGridDialog" => crate::dialogs::perspective_grid::open(app),
         "ui.perspectivePresetsDialog" => {
@@ -2268,6 +2282,8 @@ pub fn enabled(app: &VectorcraftApp, id: &str) -> bool {
         id if crate::panels::paragraph::ALIGN_COMMANDS.iter().any(|c| c.0 == id) => crate::panels::character::text_style(app).is_some(),
         "file.reveal" => app.services.reveal.is_some() && app.session.active().is_some_and(|d| d.path.is_some()),
         "file.cancelExport" | "file.exportInBackground" => app.background.jobs.iter().any(|j| j.progress.is_some() && !j.cancelled()),
+        "plugin.cancelRuns" => crate::plugin_runs::any_running(app),
+        "plugin.hideRuns" => crate::plugin_runs::any_shown(app),
         "file.place"
         | "file.export.svg"
         | "file.export.png"

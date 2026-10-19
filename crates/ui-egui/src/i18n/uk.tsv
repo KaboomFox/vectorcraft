@@ -4867,3 +4867,12 @@ lighting	Light	Світло
 	Plaster	Гіпс
 	Note Paper…	Поштовий папір…
 	Note Paper	Поштовий папір
+# Heavy plug-in filters (plugin.inspect, plug-in runs)
+	Install “{name}”, which asks for a heavy budget?	Встановити «{name}», якому потрібен великий обчислювальний бюджет?
+	Each run may take up to {minutes} minutes and do {times} times the work other plug-ins may. It runs in the background, and you can cancel it.	Кожен запуск може тривати до {minutes} хвилин і виконувати в {times} разів більше роботи, ніж дозволено іншим модулям. Він працює у фоні, і його можна скасувати.
+	It may take minutes, so it runs in the background, where you can cancel it.	Це може тривати кілька хвилин, тож модуль працює у фоні, де його можна скасувати.
+	The plug-in is computing…	Модуль виконує обчислення…
+	Inspect Plug-in	Перевірити модуль
+	Cancel Plug-in Run	Скасувати запуск модуля
+@msg	{_1} finished, but the document or the plug-in changed meanwhile: run it again	{_1} завершився, але документ або модуль тим часом змінився: запустіть його знову
+@msg	Running “{name}”…	Виконується «{name}»…

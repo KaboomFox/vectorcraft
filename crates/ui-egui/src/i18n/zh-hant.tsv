@@ -4905,3 +4905,12 @@ lighting	Light	光源
 	Plaster	塑膠效果
 	Note Paper…	便條紙…
 	Note Paper	便條紙
+# Heavy plug-in filters (plugin.inspect, plug-in runs)
+	Install “{name}”, which asks for a heavy budget?	要安裝需要大量運算預算的「{name}」嗎？
+	Each run may take up to {minutes} minutes and do {times} times the work other plug-ins may. It runs in the background, and you can cancel it.	每次執行最多可能需要 {minutes} 分鐘，並可完成其他增效模組所允許工作量的 {times} 倍。它會在背景執行，您可以隨時取消。
+	It may take minutes, so it runs in the background, where you can cancel it.	這可能需要數分鐘，因此會在背景執行，您可以在執行時取消。
+	The plug-in is computing…	增效模組正在運算…
+	Inspect Plug-in	檢查增效模組
+	Cancel Plug-in Run	取消執行增效模組
+@msg	{_1} finished, but the document or the plug-in changed meanwhile: run it again	{_1} 已完成，但文件或增效模組在此期間已變更：請重新執行
+@msg	Running “{name}”…	正在執行「{name}」…

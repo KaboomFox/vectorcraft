@@ -4854,3 +4854,12 @@ effect	Soft	Weich
 	Plaster	Gipsabdruck
 	Note Paper…	Prägepapier…
 	Note Paper	Prägepapier
+# Heavy plug-in filters (plugin.inspect, plug-in runs)
+	Install “{name}”, which asks for a heavy budget?	„{name}“ installieren, das ein großes Rechenbudget verlangt?
+	Each run may take up to {minutes} minutes and do {times} times the work other plug-ins may. It runs in the background, and you can cancel it.	Jede Ausführung kann bis zu {minutes} Minuten dauern und {times}-mal so viel Arbeit leisten, wie andere Plug-ins dürfen. Sie läuft im Hintergrund, und Sie können sie abbrechen.
+	It may take minutes, so it runs in the background, where you can cancel it.	Das kann Minuten dauern, daher läuft es im Hintergrund, wo Sie es abbrechen können.
+	The plug-in is computing…	Das Plug-in rechnet…
+	Inspect Plug-in	Plug-in prüfen
+	Cancel Plug-in Run	Plug-in-Ausführung abbrechen
+@msg	{_1} finished, but the document or the plug-in changed meanwhile: run it again	{_1} ist fertig, aber das Dokument oder das Plug-in hat sich inzwischen geändert: Führen Sie es erneut aus
+@msg	Running “{name}”…	„{name}“ wird ausgeführt…

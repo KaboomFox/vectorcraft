@@ -5110,3 +5110,12 @@ lighting	Light	光源
 	Plaster	塑料效果
 	Note Paper…	便条纸…
 	Note Paper	便条纸
+# Heavy plug-in filters (plugin.inspect, plug-in runs)
+	Install “{name}”, which asks for a heavy budget?	要安装需要大量计算预算的“{name}”吗？
+	Each run may take up to {minutes} minutes and do {times} times the work other plug-ins may. It runs in the background, and you can cancel it.	每次运行最多可能需要 {minutes} 分钟，并可完成其他插件所允许工作量的 {times} 倍。它在后台运行，可以随时取消。
+	It may take minutes, so it runs in the background, where you can cancel it.	这可能需要几分钟，因此会在后台运行，运行时可以取消。
+	The plug-in is computing…	插件正在计算…
+	Inspect Plug-in	检查插件
+	Cancel Plug-in Run	取消运行插件
+@msg	{_1} finished, but the document or the plug-in changed meanwhile: run it again	{_1} 已完成，但文档或插件在此期间已更改：请重新运行
+@msg	Running “{name}”…	正在运行“{name}”…

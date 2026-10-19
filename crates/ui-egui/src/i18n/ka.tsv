@@ -5180,3 +5180,12 @@ imageTrace	Outline	კონტური
 	Plaster	თაბაშირი
 	Note Paper…	ჩანაწერების ქაღალდი…
 	Note Paper	ჩანაწერების ქაღალდი
+# Heavy plug-in filters (plugin.inspect, plug-in runs)
+	Install “{name}”, which asks for a heavy budget?	დავაყენოთ „{name}“, რომელიც დიდ გამოთვლით ბიუჯეტს ითხოვს?
+	Each run may take up to {minutes} minutes and do {times} times the work other plug-ins may. It runs in the background, and you can cancel it.	თითოეულ გაშვებას შეიძლება {minutes} წუთამდე დასჭირდეს და სხვა პლაგინებისთვის დაშვებულზე {times}-ჯერ მეტი სამუშაო შეასრულოს. ის ფონურ რეჟიმში მუშაობს და შეგიძლიათ გააუქმოთ.
+	It may take minutes, so it runs in the background, where you can cancel it.	ამას შეიძლება წუთები დასჭირდეს, ამიტომ ის ფონურ რეჟიმში მუშაობს, სადაც შეგიძლიათ გააუქმოთ.
+	The plug-in is computing…	პლაგინი ითვლის…
+	Inspect Plug-in	პლაგინის შემოწმება
+	Cancel Plug-in Run	პლაგინის გაშვების გაუქმება
+@msg	{_1} finished, but the document or the plug-in changed meanwhile: run it again	{_1} დასრულდა, მაგრამ ამასობაში დოკუმენტი ან პლაგინი შეიცვალა: გაუშვით ხელახლა
+@msg	Running “{name}”…	მიმდინარეობს „{name}“-ის გაშვება…

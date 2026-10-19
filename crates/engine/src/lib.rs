@@ -1290,6 +1290,9 @@ pub struct Session {
     /// Where the plug-ins `plugin.install` installs are kept; `None`: only for the process
     /// ([`Session::attach_plugin_store`]).
     plugin_dir: Option<std::path::PathBuf>,
+    /// A filter's output that a run made in the background handed in for `plugin.run` to apply
+    /// ([`cmd::plugin::FilterRun::hand_in`]); the next `plugin.run` takes it.
+    plugin_output: Option<cmd::plugin::HandedIn>,
     /// URLs recently given in the Attributes panel (`attributes.set {url}`), newest first; not saved.
     pub recent_urls: Vec<String>,
     /// The language the UI is drawn in (a language code, never `auto`), set by the UI each frame;
@@ -1387,6 +1390,7 @@ impl Session {
             pdf_preset_dir: None,
             profile_dir: None,
             plugin_dir: None,
+            plugin_output: None,
             recent_urls: vec![],
             ui_language: None,
             journal_note: Default::default(),

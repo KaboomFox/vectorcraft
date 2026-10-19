@@ -5273,3 +5273,12 @@ mark-style	Japanese	Japonské
 	Plaster	Sádra
 	Note Paper…	Dopisní papír…
 	Note Paper	Dopisní papír
+# Heavy plug-in filters (plugin.inspect, plug-in runs)
+	Install “{name}”, which asks for a heavy budget?	Nainstalovat „{name}“, který žádá o velký výpočetní rozpočet?
+	Each run may take up to {minutes} minutes and do {times} times the work other plug-ins may. It runs in the background, and you can cancel it.	Každé spuštění může trvat až {minutes} minut a vykonat {times}krát víc práce, než smějí jiné zásuvné moduly. Běží na pozadí a můžete ho zrušit.
+	It may take minutes, so it runs in the background, where you can cancel it.	Může to trvat několik minut, proto běží na pozadí, kde ho můžete zrušit.
+	The plug-in is computing…	Zásuvný modul počítá…
+	Inspect Plug-in	Prozkoumat zásuvný modul
+	Cancel Plug-in Run	Zrušit běh zásuvného modulu
+@msg	{_1} finished, but the document or the plug-in changed meanwhile: run it again	{_1} doběhl, ale dokument nebo zásuvný modul se mezitím změnil: spusťte ho znovu
+@msg	Running “{name}”…	Spouští se „{name}“…

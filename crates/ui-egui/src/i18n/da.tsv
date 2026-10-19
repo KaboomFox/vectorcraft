@@ -5251,3 +5251,10 @@ swatch	Bright Violet	Kraftig violet
 	Plaster	Gips
 	Note Paper…	Notatpapir…
 	Note Paper	Notatpapir
+# Heavy plug-in filters (plugin.inspect, plug-in runs)
+	Install “{name}”, which asks for a heavy budget?	Installér »{name}«, som beder om et stort beregningsbudget?
+	Each run may take up to {minutes} minutes and do {times} times the work other plug-ins may. It runs in the background, and you can cancel it.	Hver kørsel kan tage op til {minutes} minutter og udføre {times} gange så meget arbejde, som andre plug-ins må. Den kører i baggrunden, og du kan annullere den.
+	It may take minutes, so it runs in the background, where you can cancel it.	Det kan tage minutter, så det kører i baggrunden, hvor du kan annullere det.
+	The plug-in is computing…	Plug-in'en regner…
+	Inspect Plug-in	Undersøg plug-in
+	Cancel Plug-in Run	Annullér plug-in-kørsel
