@@ -12,3 +12,6 @@ repository's history. Each folder belongs to one pull request.
 - `live-effect-paints/`: live effects that read the fills and strokes of the object they sit on. A
   test effect that draws a triangle only while the object's stroke is 5 pt wide, shown at 5 pt and
   at 3 pt.
+- `filter-effects/`: filters that set effects and stroke styles. A test filter that adds a frame with a
+  round-joined 6 pt stroke and a Roughen effect: before it runs, after (the Appearance panel) and the
+  Stroke panel.
