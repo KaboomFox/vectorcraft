@@ -18,3 +18,5 @@ repository's history. Each folder belongs to one pull request.
 - `svg-attributes/`: SVG attributes in other applications' namespaces kept from import to export. An
   SVG whose objects carry a plotter's and a cutter's attributes, opened, with the Attributes panel
   listing the frame's.
+- `document-data/`: data a filter plug-in keeps with the document. A test filter that keeps a
+  plotter's pens, listed in Document Info › Plug-in Data.
