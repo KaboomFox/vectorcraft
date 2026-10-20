@@ -1974,6 +1974,8 @@ objects differ) and `recentUrls`. `attributes.set {overprintFill?, overprintStro
 note?, ids?}` sets them in one undo step; `path.setFillRule {rule: "nonZero"|"evenOdd"}` sets the fill rule of the
 paths and compound paths, and `path.reverse {reversed?}` makes subpaths run counter-clockwise (true) or clockwise
 (false). SVG export wraps an object with a URL in `<a xlink:href>`, and SVG import reads `<a href>` links back.
+`foreign` lists the objects' attributes in other applications' XML namespaces (`[{ns, prefix, name, value}]`, null
+where they differ): SVG import keeps them and SVG export writes them back, and the panel shows them read only.
 
 ```json
 {"name":"run_command","arguments":{"command":"attributes.set","params":{"ids":[12],"url":"https://example.com","imageMap":"rectangle"}}}

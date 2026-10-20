@@ -1,6 +1,8 @@
 //! Attributes panel: Overprint Fill / Overprint Stroke, Show / Don't Show Center, Reverse Path
 //! Direction Off / On, the fill rule (non-zero winding or even-odd), Image Map, URL (with the
-//! recent URLs and a Browser button) and the note. The menu hides the options and shows the note.
+//! recent URLs and a Browser button), the note, and the attributes other applications keep on the
+//! objects (kept from SVG import to export, shown but not edited). The menu hides the options and
+//! shows the note.
 //! Everything reads `attributes.info` ([`vectorcraft_engine::Session::attributes_info`]) and acts
 //! through `attributes.set`, `path.reverse` and `path.setFillRule`.
 
@@ -128,10 +130,22 @@ pub fn show(app: &mut VectorcraftApp, ui: &mut Ui) {
             }
         });
     }
+    // What other applications keep on the objects: written back to SVG, so shown, not edited.
+    if let Some(kept) = info.foreign.as_ref().filter(|k| !k.is_empty()) {
+        widgets::divider(ui);
+        widgets::subheader(ui, tl!("Other Apps' Attributes:"));
+        for a in kept {
+            let value: String = a.value.chars().take(MAX_SHOWN).collect();
+            widgets::dim_label(ui, &format!("{}:{} = {value}", a.prefix, a.name));
+        }
+    }
     if !has {
         widgets::dim_label(ui, if selection_len(app) == 0 { tl!("No Selection") } else { "" });
     }
 }
+
+/// The most characters of another application's attribute value the panel shows.
+const MAX_SHOWN: usize = 80;
 
 /// The recent URLs button: a menu of the URLs given lately; picking one sets it.
 fn recent_urls(app: &mut VectorcraftApp, ui: &mut Ui) {
@@ -223,6 +237,21 @@ mod tests {
         let texts = frame(&mut app);
         assert!(!texts.iter().any(|t| t == "https://example.com/a" || t == "first note"), "{texts:?}");
         assert!(open_url(&mut app, &json!({})).is_err());
+    }
+
+    /// The attributes other applications keep on the selected object are listed, read only.
+    #[test]
+    fn panel_lists_other_apps_attributes() {
+        let mut app = VectorcraftApp::new(Session::new(), Default::default());
+        let svg = r#"<svg xmlns="http://www.w3.org/2000/svg" xmlns:plotter="https://example.org/plotter" width="100" height="100">
+            <rect id="a" width="50" height="50" plotter:pen="2" plotter:speed="40"/></svg>"#;
+        run(&mut app, "document.open", json!({"name": "notes.svg", "dataBase64": vectorcraft_format::base64_encode(svg.as_bytes())}));
+        run(&mut app, "select.all", json!({}));
+        let texts = frame(&mut app);
+        for want in ["Other Apps' Attributes:", "plotter:pen = 2", "plotter:speed = 40"] {
+            assert!(texts.iter().any(|t| t == want), "{want} in {texts:?}");
+        }
+        assert_eq!(app.session.execute("attributes.info", &json!({})).unwrap()["foreign"][1]["value"], "40");
     }
 
     /// Only web and mail URLs reach the browser.

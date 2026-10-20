@@ -87,6 +87,7 @@ pub(super) fn fill_info(d: &Document, info: &mut AttributesInfo) {
     info.image_map = same(attrs().map(|a| a.image_map));
     info.url = same(attrs().map(|a| a.url));
     info.note = same(attrs().map(|a| a.note));
+    info.foreign = same(attrs().map(|a| a.foreign));
     let mut all = vec![];
     nodes.iter().filter_map(|n| fill_rule_owner(d, n.id)).for_each(|n| ruled(n, &mut all));
     info.fill_rule = same(all.into_iter().map(|(_, r)| r));

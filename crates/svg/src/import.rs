@@ -8,8 +8,8 @@ use std::sync::Arc;
 use usvg::roxmltree;
 use vectorcraft_color::{BlendMode, Color, Gradient, GradientGeom, GradientKind, GradientPaint, GradientStop, Paint};
 use vectorcraft_doc::{
-    Appearance, AppearanceItem, Dash, Document, FillLayer, ImageBlob, ImageObject, LayerColor, LineCap, LineJoin, MAX_SVG_SCRIPTS, Node, NodeId,
-    NodeKind, PatternDef, SVG_EVENTS, StrokeLayer, Unit,
+    Appearance, AppearanceItem, Dash, Document, FillLayer, ForeignAttribute, ImageBlob, ImageObject, LayerColor, LineCap, LineJoin, MAX_SVG_SCRIPTS,
+    Node, NodeId, NodeKind, PatternDef, SVG_EVENTS, StrokeLayer, Unit,
 };
 use vectorcraft_geom::{Affine, BezPath, FillRule, PathData, Point, Rect, Vec2, shapes};
 
@@ -91,6 +91,7 @@ pub(crate) fn import(svg: &str, opts: &ImportOptions) -> Result<(Document, Vec<S
         non_scaling: found.non_scaling,
         data: found.data,
         events: found.events,
+        foreign: found.foreign,
         sublayers: found.sublayers,
         sublayer_groups: HashSet::new(),
         screen: k,
@@ -169,6 +170,7 @@ pub(crate) fn import(svg: &str, opts: &ImportOptions) -> Result<(Document, Vec<S
             l.visible = !im.hidden.contains(g.id());
             im.keep_data(g.id(), &mut l);
             im.keep_events(g.id(), &mut l);
+            im.keep_foreign(g.id(), &mut l);
             im.doc.layers.push(Arc::new(l));
         }
     } else {
@@ -377,6 +379,8 @@ struct Importer {
     data: HashMap<String, Vec<(String, String)>>,
     /// The event attributes of elements, by id ([`user_events`]).
     events: HashMap<String, Vec<(String, String)>>,
+    /// The attributes of elements in other applications' namespaces, by id ([`foreign`]).
+    foreign: HashMap<String, Vec<ForeignAttribute>>,
     /// Ids of the `<g>` elements marked as layers ([`marked_layer`]).
     sublayers: HashSet<String>,
     /// The groups made of them, made sublayers where they sit in a layer ([`promote_sublayers`]).
@@ -495,6 +499,8 @@ struct Found {
     data: HashMap<String, Vec<(String, String)>>,
     /// The event attributes of elements, by id ([`user_events`]).
     events: HashMap<String, Vec<(String, String)>>,
+    /// The attributes of elements in other applications' namespaces, by id ([`foreign`]).
+    foreign: HashMap<String, Vec<ForeignAttribute>>,
     /// The JavaScript files `<script>` elements link to ([`linked_scripts`]).
     scripts: Vec<String>,
     /// Ids of the `<g>` elements marked as layers ([`marked_layer`]).
@@ -585,6 +591,7 @@ impl Edits {
 /// * shapes with a non-scaling stroke get an id when they have none, recorded ([`vector_effect`]);
 /// * objects with event attributes get an id when they have none, recorded with them
 ///   ([`user_events`]), and the `<script>` links are recorded ([`linked_scripts`]);
+/// * so do objects with attributes in other applications' namespaces ([`foreign`]);
 /// * linked files are read ([`files`]);
 /// * percentage lengths in a `<symbol>` with a `viewBox` become numbers ([`symbol_units`]);
 /// * what style sheet rules with a `:not()` set goes in `style` attributes ([`not_rules`]).
@@ -597,7 +604,7 @@ fn prepass<'s>(svg: &'s str, xml: &roxmltree::Document, opts: &ImportOptions) ->
     if !css_transform
         && !not
         && !events
-        && !["<a", "display", "<use", ":use", "<image", ":image", vector_effect::NON_SCALING, "data-", "groupmode", "script"]
+        && !["<a", "display", "<use", ":use", "<image", ":image", vector_effect::NON_SCALING, "data-", "groupmode", "script", "xmlns:"]
             .iter()
             .any(|t| svg.contains(t))
     {
@@ -615,6 +622,14 @@ fn prepass<'s>(svg: &'s str, xml: &roxmltree::Document, opts: &ImportOptions) ->
             let data = user_data(e);
             if !data.is_empty() {
                 found.data.insert(edits.id(svg, e), data);
+            }
+        }
+    }
+    if svg.contains("xmlns:") {
+        for e in elements().filter(|e| OBJECT_ELEMENTS.contains(&e.tag_name().name())) {
+            let kept = foreign(e);
+            if !kept.is_empty() {
+                found.foreign.insert(edits.id(svg, e), kept);
             }
         }
     }
@@ -723,6 +738,42 @@ fn user_data(e: XNode) -> Vec<(String, String)> {
         .filter(|(k, _)| !k.is_empty() && *k != "name" && !k.starts_with("vc-"))
         .take(MAX_DATA)
         .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect()
+}
+
+/// The namespaces whose attributes VectorCraft reads, writes or makes again itself: their
+/// attributes aren't kept as another application's ([`foreign`]).
+const OWN_NAMESPACES: &[&str] = &[
+    "http://www.w3.org/2000/svg",
+    "http://www.w3.org/1999/xlink",
+    "http://www.w3.org/XML/1998/namespace",
+    "http://www.w3.org/2000/xmlns/",
+    INKSCAPE,
+    "http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd",
+    crate::EDITING_NS,
+];
+
+/// The most attributes in other applications' namespaces kept per element (the file is untrusted).
+pub const MAX_FOREIGN: usize = 64;
+
+/// The longest value of such an attribute kept, in bytes; a longer one is left out.
+pub const MAX_FOREIGN_VALUE: usize = 64 * 1024;
+
+/// The attributes of element `e` in other applications' namespaces, in order ([`OWN_NAMESPACES`]
+/// aside), with the prefix the file gives each namespace: `plotter:pen="2"`.
+fn foreign(e: XNode) -> Vec<ForeignAttribute> {
+    e.attributes()
+        .filter_map(|a| {
+            let ns = a.namespace().filter(|ns| !OWN_NAMESPACES.contains(ns))?;
+            let prefix = e.lookup_prefix(ns).filter(|p| !p.is_empty())?;
+            (a.value().len() <= MAX_FOREIGN_VALUE).then(|| ForeignAttribute {
+                ns: ns.to_string(),
+                prefix: prefix.to_string(),
+                name: a.name().to_string(),
+                value: a.value().to_string(),
+            })
+        })
+        .take(MAX_FOREIGN)
         .collect()
 }
 
@@ -910,6 +961,7 @@ impl Importer {
         }
         self.keep_data(n.id(), &mut out);
         self.keep_events(n.id(), &mut out);
+        self.keep_foreign(n.id(), &mut out);
         Some(out)
     }
 
@@ -926,6 +978,14 @@ impl Importer {
     fn keep_events(&self, id: &str, n: &mut Node) {
         if let Some(events) = self.events.get(id).filter(|_| n.extras().attrs.as_ref().is_none_or(|a| a.events.is_empty())) {
             n.edit_attrs(|a| a.events = events.clone());
+        }
+    }
+
+    /// Give `n` the attributes of element `id` in other applications' namespaces, unless it has
+    /// some already (what an inner element made of it keeps).
+    fn keep_foreign(&self, id: &str, n: &mut Node) {
+        if let Some(kept) = self.foreign.get(id).filter(|_| n.extras().attrs.as_ref().is_none_or(|a| a.foreign.is_empty())) {
+            n.edit_attrs(|a| a.foreign = kept.clone());
         }
     }
 
