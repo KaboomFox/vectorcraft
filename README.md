@@ -15,3 +15,6 @@ repository's history. Each folder belongs to one pull request.
 - `filter-effects/`: filters that set effects and stroke styles. A test filter that adds a frame with a
   round-joined 6 pt stroke and a Roughen effect: before it runs, after (the Appearance panel) and the
   Stroke panel.
+- `svg-attributes/`: SVG attributes in other applications' namespaces kept from import to export. An
+  SVG whose objects carry a plotter's and a cutter's attributes, opened, with the Attributes panel
+  listing the frame's.
