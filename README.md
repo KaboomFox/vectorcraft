@@ -23,3 +23,6 @@ repository's history. Each folder belongs to one pull request.
 - `heavy-filters/`: filters that ask for a heavy budget, run in the background. A test filter that
   computes until it is cancelled: installing it asks first, its dialog has no Preview, the progress
   window while it runs, and the status bar once it was cancelled.
+- `effect-overlays/`: live effects that show overlays on the canvas. A test effect that keeps a
+  rectangle as it is and shows how a pen would hatch it (strokes in blue, moves in orange): the
+  canvas, and the same document exported as PNG, where only the rectangle appears.
