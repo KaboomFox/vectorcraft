@@ -20,3 +20,6 @@ repository's history. Each folder belongs to one pull request.
   listing the frame's.
 - `document-data/`: data a filter plug-in keeps with the document. A test filter that keeps a
   plotter's pens, listed in Document Info › Plug-in Data.
+- `heavy-filters/`: filters that ask for a heavy budget, run in the background. A test filter that
+  computes until it is cancelled: installing it asks first, its dialog has no Preview, the progress
+  window while it runs, and the status bar once it was cancelled.
