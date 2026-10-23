@@ -5526,3 +5526,5 @@ axis	Y Axis	osa Y
 	Rectangular Grid Tool Options	Možnosti nástroje Obdélníková mřížka
 	Polar Grid Tool Options	Možnosti nástroje Polární mřížka
 	Fill Line	Výplň úsečky
+# Live-effect overlays (plug-in effects)
+@msg	`overlay`: {why}	`overlay`: {why}

@@ -5468,3 +5468,5 @@ axis	Y Axis	Eje Y
 	Rectangular Grid Tool Options	Opciones de la herramienta Cuadrícula rectangular
 	Polar Grid Tool Options	Opciones de la herramienta Cuadrícula polar
 	Fill Line	Rellenar línea
+# Live-effect overlays (plug-in effects)
+@msg	`overlay`: {why}	`overlay`: {why}
